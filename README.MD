@@ -49,6 +49,11 @@ Start the server
 
 ## Usage/Examples
 
+### Get Playlist ID
+1) Get Playlist Share Link
+![Get Playlist Link](https://github.com/[shakedlv]/[reponame]/blob/[branch]/image.jpg?raw=true)
+
+https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=bd9695494bf04ac6
 ```javascript
 import Component from 'my-project'
 

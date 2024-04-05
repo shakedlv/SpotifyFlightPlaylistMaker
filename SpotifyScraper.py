@@ -1,5 +1,3 @@
-import moviepy
-from pytube.extract import playlist_id
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
@@ -21,7 +19,7 @@ def make_unique_folder(playlist, creator):
     i = 1
     folder_name = f"{playlist}_{creator}"
     while os.path.exists(folder_name):
-        folder_name = f"{folder_name}_{i}"
+        folder_name = f"{playlist}_{creator}_{i}"
         i += 1
     os.makedirs(f"{folder_name}")
     return folder_name
@@ -36,6 +34,8 @@ class SpotifyDriver:
     def __init__(self, playlist_url, headless=False):
         self.options = webdriver.EdgeOptions()
         self.options.use_chromium = True
+        self.options.add_argument("--profile-directory=Default")
+
         self.options.add_experimental_option('useAutomationExtension', False)
         self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.options.add_experimental_option("detach", True)
@@ -48,7 +48,7 @@ class SpotifyDriver:
             self.options.add_argument("headless")
             self.options.add_argument("disable-gpu")
         self.driver = webdriver.Edge(options=self.options, service=Service(EdgeChromiumDriverManager().install()))
-        self.driver.get(playlist_url)
+        self.driver.get(f" https://open.spotify.com/playlist/{playlist_url}")
         self.playlist_title = self.driver.find_element(By.XPATH, './/span[@class="rEN7ncpaUeSGL9z0NGQR"]/h1').text
         self.playlist_creator = self.driver.find_element(By.XPATH,
                                                          './/div[@class="RANLXG3qKB61Bh33I0r2 '
@@ -57,15 +57,15 @@ class SpotifyDriver:
         self.get_playlist_songs()
 
     def get_playlist_songs(self):
-        playlist_items_container = '//*[@id="main"]/div/div[2]/div[3]/div[1]/div[2]/div[2]/div[2]/main/div[' \
+        playlist_items_container = '/html/body/div[3]/div/div[2]/div[3]/div[1]/div[2]/div[2]/div[2]/main/div[' \
                                    '1]/section/div[2]/div[3]/div[1]/div[2]/div[2]'
-        playlist_items_container_element = WebDriverWait(self.driver, 60).until(EC.presence_of_element_located((By.XPATH, playlist_items_container)))
+        playlist_items_container_element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, playlist_items_container)))
         playlist_items = playlist_items_container_element.find_elements(By.XPATH, "*")
         print_output(f"Found {len(playlist_items)} Songs")
         for song in playlist_items:
             try:
-                song_title = WebDriverWait(song, 60).until(EC.presence_of_element_located((By.XPATH,  './/a[@class="t_yrXoUO3qGsJS4Y6iXX"]/div'))).text
-                artists_element = WebDriverWait(song, 60).until(EC.presence_of_element_located((By.XPATH, './/div[@class="iCQtmPqY0QvkumAOuCjr"]/span/div/a')))
+                song_title = WebDriverWait(song, 10).until(EC.presence_of_element_located((By.XPATH,  './/a[@class="t_yrXoUO3qGsJS4Y6iXX"]/div'))).text
+                artists_element = WebDriverWait(song, 10).until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="iCQtmPqY0QvkumAOuCjr"]/span/div/a')))
                 if len(artists_element) >= 1:
                     artist = artists_element[0].text
                     self.playlist_songs_info.append({
@@ -75,6 +75,7 @@ class SpotifyDriver:
                 else:
                     self.songs_failed += 1
             except Exception as ex:
+
                 self.songs_failed += 1
 
         print_output(f"Finish fetched {len(self.playlist_songs_info)}, failed {self.songs_failed}")
@@ -83,7 +84,7 @@ class SpotifyDriver:
     def get_youtube_url_by_song(self, title, artist):
         search_query = f'https://www.youtube.com/results?search_query={title}+by+{artist}'
         self.driver.get(search_query)
-        result = WebDriverWait(self.driver, 60).until(EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-video-renderer')))
+        result = WebDriverWait(self.driver, 10).until(EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-video-renderer')))
         return result[0].find_element(By.ID, "video-title").get_attribute('href')
 
     def download_songs(self, playlist, creator):

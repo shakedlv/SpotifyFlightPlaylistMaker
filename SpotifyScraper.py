@@ -1,9 +1,12 @@
+import time
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from selenium.webdriver.edge.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 
 from pytube import YouTube
 from tqdm import tqdm
@@ -30,6 +33,7 @@ class SpotifyDriver:
     songs_failed = 0
     playlist_title = ""
     playlist_creator = ""
+    playlist_count = 0
 
     def __init__(self, playlist_url, headless=True):
         self.options = webdriver.EdgeOptions()
@@ -52,19 +56,38 @@ class SpotifyDriver:
         self.playlist_creator = self.driver.find_element(By.XPATH,
                                                          './/div[@class="RANLXG3qKB61Bh33I0r2 '
                                                          'NO_VO3MRVl9z3z56d8Lg"]/span/a').text
-
+        amount = self.driver.find_elements(By.XPATH, './/div[@class="Fb61sprjhh75aOITDnsJ"]/span')
+        if len(amount) == 1:
+            self.playlist_count = int(amount[0].text.split()[0])
+        else:
+            self.playlist_count = int(amount[1].text.split()[0])
         self.get_playlist_songs()
 
     def get_playlist_songs(self):
         playlist_items_container = '/html/body/div[3]/div/div[2]/div[3]/div[1]/div[2]/div[2]/div[2]/main/div[' \
                                    '1]/section/div[2]/div[3]/div[1]/div[2]/div[2]'
-        playlist_items_container_element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, playlist_items_container)))
+        playlist_items_container_element = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, playlist_items_container)))
         playlist_items = playlist_items_container_element.find_elements(By.XPATH, "*")
+
+        while len(playlist_items) != self.playlist_count:
+            try:
+                element = self.driver.find_element(By.CSS_SELECTOR, f'[aria-rowindex="{len(playlist_items)-1}"')
+                self.driver.execute_script("arguments[0].scrollIntoView();", element)
+                playlist_items = playlist_items_container_element.find_elements(By.XPATH, "*")
+                print(f"{len(playlist_items)} - {self.playlist_count}")
+                time.sleep(1)
+            except Exception as ex:
+                print(ex)
+                time.sleep(1)
+
         print_output(f"Found {len(playlist_items)} Songs")
         for song in playlist_items:
             try:
-                song_title = WebDriverWait(song, 10).until(EC.presence_of_element_located((By.XPATH,  './/a[@class="t_yrXoUO3qGsJS4Y6iXX"]/div'))).text
-                artists_element = WebDriverWait(song, 10).until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="iCQtmPqY0QvkumAOuCjr"]/span/div/a')))
+                song_title = WebDriverWait(song, 10).until(
+                    EC.presence_of_element_located((By.XPATH, './/a[@class="t_yrXoUO3qGsJS4Y6iXX"]/div'))).text
+                artists_element = WebDriverWait(song, 10).until(
+                    EC.presence_of_all_elements_located((By.XPATH, './/div[@class="iCQtmPqY0QvkumAOuCjr"]/span/div/a')))
                 if len(artists_element) >= 1:
                     artist = artists_element[0].text
                     self.playlist_songs_info.append({
@@ -83,7 +106,8 @@ class SpotifyDriver:
     def get_youtube_url_by_song(self, title, artist):
         search_query = f'https://www.youtube.com/results?search_query={title}+by+{artist}'
         self.driver.get(search_query)
-        result = WebDriverWait(self.driver, 10).until(EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-video-renderer')))
+        result = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_all_elements_located((By.TAG_NAME, 'ytd-video-renderer')))
         return result[0].find_element(By.ID, "video-title").get_attribute('href')
 
     def download_songs(self, playlist, creator):

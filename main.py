@@ -5,6 +5,6 @@ parser = argparse.ArgumentParser(description="Create offline playlist from Spoti
 parser.add_argument('playlist_id', metavar='Playlist-ID', type=str, help='Enter playlist id')
 args = parser.parse_args()
 
-playlist_id = args.id
+playlist_id = args.playlist_id
 
 spotify_client = SpotifyDriver(playlist_id)

@@ -31,11 +31,10 @@ class SpotifyDriver:
     playlist_title = ""
     playlist_creator = ""
 
-    def __init__(self, playlist_url, headless=False):
+    def __init__(self, playlist_url, headless=True):
         self.options = webdriver.EdgeOptions()
         self.options.use_chromium = True
         self.options.add_argument("--profile-directory=Default")
-
         self.options.add_experimental_option('useAutomationExtension', False)
         self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.options.add_experimental_option("detach", True)
